@@ -1,0 +1,68 @@
+{
+  "id": 29,
+  "name": "testing",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow showid subscription::136748"
+      },
+      "name": "Execute Command",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        20,
+        450
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "output",
+              "value": "={{$json[\"error\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        800,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "command": "ls "
+      },
+      "name": "Execute Command1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -300,
+        480
+      ]
+    }
+  ],
+  "connections": {},
+  "createdAt": "2022-04-27T11:20:10.343Z",
+  "updatedAt": "2022-04-27T11:20:10.343Z",
+  "settings": {},
+  "staticData": null
+}
