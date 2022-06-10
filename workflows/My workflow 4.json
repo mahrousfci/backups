@@ -1,0 +1,486 @@
+{
+  "id": 28,
+  "name": "My workflow 4",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT body\nFROM \n\trequest_log rl \nWHERE \nrequesturi = \"/api/1.0/event\" AND \n\t`timestamp` BETWEEN '{{$json[\"yesterdayDate\"]}} 00:00:00.000' and '{{$json[\"yesterdayDate\"]}} 23:59:59.999'\n;"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        730,
+        1000
+      ],
+      "credentials": {
+        "mySql": {
+          "id": null,
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 12,
+              "minute": 30
+            }
+          ]
+        }
+      },
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        460,
+        1170
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "var dateObj = new Date();\ndateObj.setDate(dateObj.getDate() - 6); \n\nitems[0].json.yesterdayDate = dateObj.toISOString().split(\"T\")[0];\nreturn items;"
+      },
+      "name": "Get yesterday's date",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        540,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        1020
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"SplitInBatches\"].context[\"noItemsLeft\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1940,
+        1230
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "NoOp2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2210,
+        1210
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!Object.keys($node[\"FilterElements\"].json).length}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFEmptyData1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        1000
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {},
+      "name": "NoOp3",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "http://10.201.5.24:8081/api/1.0/event",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "company_id",
+              "value": "={{$json[\"body\"][\"company_id\"]}}"
+            },
+            {
+              "name": "customer_id",
+              "value": "={{$json[\"body\"][\"customer_id\"]}}"
+            },
+            {
+              "name": "onetime_fee_id",
+              "value": "={{$json[\"body\"][\"onetime_fee_id\"]}}"
+            },
+            {
+              "name": "subject",
+              "value": "={{$json[\"body\"][\"subject\"]}}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{$json[\"body\"][\"subscription_id\"]}}"
+            },
+            {
+              "name": "type",
+              "value": "={{$json[\"body\"][\"type\"]}}"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "api-key",
+              "value": "asdfjkasdlkfj21345-cvmdsfkj-1232"
+            }
+          ]
+        }
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2140,
+        670
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(3000);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 3 secs",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        2320,
+        790
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "functionCode": "item.bodyStr = JSON.stringify(item.body);\n\nreturn item;"
+      },
+      "name": "FunctionItem",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        700,
+        590
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const newItems = [];\nfor (var item of items) {  \n  if(item.json[\"body\"] && item.json[\"body\"][\"type\"] !== \"CONTRACT_CREATED\" && item.json[\"body\"][\"type\"] !== \"CONTRACT_CHANGED\") {\n    newItems.push({json: {...item.json}});\n  }\n}\n\nreturn newItems;\n"
+      },
+      "name": "FilterElements",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        900,
+        1000
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$node[\"tctlSearch\"].json[\"error\"]}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFEmptyData",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1970,
+        810
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {},
+      "name": "FunctionItem1",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        2150,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge6",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1830,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [];"
+      },
+      "name": "Dummy Function",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        820,
+        460
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Function",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        780,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow showid {{$json[\"searchWorkflowId\"]}}"
+      },
+      "name": "tctlSearch",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1690,
+        810
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "item.searchWorkflowId = item[\"body\"][\"subscription_id\"]>0?`subscription::${item[\"body\"][\"subscription_id\"]}`:`fee::${item[\"body\"][\"onetime_fee_id\"]}`;\n\nreturn item;"
+      },
+      "name": "FunctionItem2",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        1530,
+        730
+      ]
+    }
+  ],
+  "connections": {
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "FilterElements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get yesterday's date": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "FunctionItem2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "NoOp2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFEmptyData1": {
+      "main": [
+        [
+          {
+            "node": "NoOp3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FilterElements": {
+      "main": [
+        [
+          {
+            "node": "IFEmptyData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFEmptyData": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "IFEmptyData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tctlSearch": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "FunctionItem2": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "tctlSearch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2022-04-27T11:19:42.634Z",
+  "updatedAt": "2022-04-27T11:19:42.634Z",
+  "settings": {},
+  "staticData": null
+}
