@@ -1,0 +1,184 @@
+{
+  "id": 22,
+  "name": "My workflow 3",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "=C:\\Users\\ies325\\Documents\\billing\\for_client.xml"
+      },
+      "name": "Read Binary File1",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        440,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "data0",
+        "options": {}
+      },
+      "name": "XML2",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        880,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "setAllData": false,
+        "destinationKey": "data0",
+        "options": {}
+      },
+      "name": "Move Binary Data1",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        680,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Code here will run only once, no matter how many input items there are.\n// More info and help: https://docs.n8n.io/nodes/n8n-nodes-base.function\n\n// Loop over inputs and add a new field called 'myNewField' to the JSON of each one\nvar newItems = [];\nfor (item of items) {\n  //item.json.myNewField = 1;\n  for (doc of item.json[\"Array-Document\"][\"Document\"]) {\n    newItems.push({json: doc})\n  }\n}\n\n// You can write logs to the browser console\n//console.log('Done!');\n\nreturn newItems;"
+      },
+      "name": "Function",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT c.customerid, c.customer_name, c.ssn, c.phone, c.mobile, c.fax, c.email, c.homepage, t.customer_type,  \ncompany_name, it.type, ip.period, ca.accessid, \nca.recipient as postal_recipient,\nca.co as postal_co,\nca.street as postal_street,ca.zipcode as postal_zipcode,ca.city as postal_city, \nconcat(CONCAT(CONCAT(CONCAT(ca.street,\", \"), ca.city), \", \"),ca.zipcode) as postal_addr,\nca2.recipient as faktura_recipient,\nca2.co as faktura_co,\nca2.street as faktura_street,ca2.zipcode as faktura_zipcode,ca2.city as faktura_city,\nconcat(CONCAT(CONCAT(CONCAT(ca2.street,\", \"), ca2.city), \", \"),ca2.zipcode) as faktura_addr\nFROM customer AS c \nLEFT JOIN customer_address AS ca on ca.crmid = c.crmid and ca.address_typeid=2 \nLEFT JOIN customer_address AS ca2 on ca2.crmid = c.crmid and ca2.address_typeid=3 \nJOIN customer_type AS t ON c.customer_type = t.customer_typeid\nJOIN customer_status AS s ON c.customer_status = s.customer_statusid\nJOIN company AS cp ON c.companyid = cp.companyid\nJOIN invoice_type AS it ON c.invoice_type = it.invoice_typeid\nJOIN invoice_period AS ip ON c.invoice_period = ip.invoice_periodid\nJOIN billing_system AS bs ON c.billing_system = bs.billing_systemid\nWHERE c.customerid = {{$json[\"EinvoiceAlias\"]}}\nAND c.companyid = 5;"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        320
+      ],
+      "credentials": {
+        "mySql": {
+          "id": null,
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "options": {}
+      },
+      "name": "Spreadsheet File",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "C:\\Users\\ies325\\Documents\\customer-info.xls"
+      },
+      "name": "Write excel file",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "position": [
+        1660,
+        320
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Read Binary File1": {
+      "main": [
+        [
+          {
+            "node": "Move Binary Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML2": {
+      "main": [
+        [
+          {
+            "node": "Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Binary Data1": {
+      "main": [
+        [
+          {
+            "node": "XML2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File": {
+      "main": [
+        [
+          {
+            "node": "Write excel file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2022-04-27T11:16:37.619Z",
+  "updatedAt": "2022-04-27T11:16:37.619Z",
+  "settings": {},
+  "staticData": null
+}
