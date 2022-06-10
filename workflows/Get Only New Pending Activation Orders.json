@@ -1,0 +1,162 @@
+{
+  "id": 6,
+  "name": "Get Only New Pending Activation Orders",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Spreadsheet File",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        920,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "=C:\\Users\\ies325\\Documents\\orders_reports\\All_Pending_Activation_202112231454.csv"
+      },
+      "name": "Read Binary File1",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        740,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\nccs.customer_contract_subscriptionid as SubscriptionId,\nc.customerid,\npc.product_catalogue_name,\nccs.created_at ,\nccs.contract_period_start,\nccs.bill_from ,\nccstatus.status status,\nCASE\nWHEN provisioning_status = 0 THEN \"NOT SENT\"\nWHEN provisioning_status = 1 THEN \"ACTIVE\"\nWHEN provisioning_status = 2 THEN \"TERMINATED\"\nWHEN provisioning_status = 3 THEN \"FAILED\"\nWHEN provisioning_status = 4 THEN \"UNDER ACTIVATION\"\nWHEN provisioning_status = 5 THEN \"UNDER TERMINATTION\"\nWHEN provisioning_status = 6 THEN \"PARTLY FAILED\"\nWHEN provisioning_status = 7 THEN \"CREATED\"\nWHEN provisioning_status = 8 THEN \"WAITING 4 DELIVERY\"\nWHEN provisioning_status = 9 THEN \"WAITING ON HUMAN TASK\"\nWHEN provisioning_status = 99 THEN \"MANUAL\"\nELSE \"UNKNOWN\"\nEND provisioning_status,\ncn.name customer_network\nFROM customer_contract_subscription ccs\nJOIN customer_order co on co.customer_orderid = ccs.customer_orderid\nJOIN customer_contract cc on cc.customer_contractid = ccs.customer_contractid\nJOIN customer_contract_status ccstatus on ccstatus.customer_contract_statusid = ccs.contract_status\nJOIN product_catalogue pc on pc.product_catalogueid = ccs.product_catalogueid\nLEFT JOIN customer_network cn on cc.customer_networkid = cn.customer_networkid\nJOIN customer c on c.crmid = cc.crmid\nWHERE ccs.contract_status in (6)\n-- AND provisioning_status = 0\nAND cn.name != 'Productiontest'\n-- AND ccs.contract_period_start < '2021-12-16 23:59:59.999'\nAND ccs.contract_period_start < CURDATE()\norder BY ccs.created_at\n;"
+      },
+      "name": "PendingActivationOrders",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        920,
+        430
+      ],
+      "credentials": {
+        "mySql": {
+          "id": null,
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "removeKeyMatches",
+        "propertyName1": "SubscriptionId",
+        "propertyName2": "SubscriptionId"
+      },
+      "name": "GetNotExisingInExcelMerge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1190,
+        340
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "fileFormat": "csv",
+        "options": {}
+      },
+      "name": "Spreadsheet File1",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        1390,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "=C:\\Users\\ies325\\Documents\\orders_reports\\NewActivation_{{new Date().getTime()}}.csv"
+      },
+      "name": "Write excel rest",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "position": [
+        1590,
+        340
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Spreadsheet File": {
+      "main": [
+        [
+          {
+            "node": "GetNotExisingInExcelMerge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File1": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PendingActivationOrders": {
+      "main": [
+        [
+          {
+            "node": "GetNotExisingInExcelMerge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "GetNotExisingInExcelMerge": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File1": {
+      "main": [
+        [
+          {
+            "node": "Write excel rest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2022-04-20T20:20:46.270Z",
+  "updatedAt": "2022-04-20T20:20:46.270Z",
+  "settings": {},
+  "staticData": null
+}
