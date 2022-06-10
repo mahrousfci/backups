@@ -1,0 +1,713 @@
+{
+  "id": 24,
+  "name": "Pending Terminated Orders Handling",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        720,
+        640
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"SplitInBatches\"].context[\"noItemsLeft\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        860
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {},
+      "name": "NoOp2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2100,
+        840
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!Object.keys($node[\"PendingTerminatedOrders\"].json).length}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFEmptyData1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        440,
+        620
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {},
+      "name": "NoOp3",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        540,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(3000);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 3 secs",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        1980,
+        460
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\nccs.customer_contract_subscriptionid as SubscriptionId,\nc.customerid,\npc.product_catalogue_name,\nccs.created_at ,\nccs.contract_period_end,\nccs.contract_period_start,\nccs.bill_from ,\nccstatus.status status,\nCASE\nWHEN provisioning_status = 0 THEN \"NOT SENT\"\nWHEN provisioning_status = 1 THEN \"ACTIVE\"\nWHEN provisioning_status = 2 THEN \"TERMINATED\"\nWHEN provisioning_status = 3 THEN \"FAILED\"\nWHEN provisioning_status = 4 THEN \"UNDER ACTIVATION\"\nWHEN provisioning_status = 5 THEN \"UNDER TERMINATTION\"\nWHEN provisioning_status = 6 THEN \"PARTLY FAILED\"\nWHEN provisioning_status = 7 THEN \"CREATED\"\nWHEN provisioning_status = 8 THEN \"WAITING 4 DELIVERY\"\nWHEN provisioning_status = 9 THEN \"WAITING ON HUMAN TASK\"\nWHEN provisioning_status = 99 THEN \"MANUAL\"\nELSE \"UNKNOWN\"\nEND provisioning_status\nFROM customer_contract_subscription ccs\nJOIN customer_order co on co.customer_orderid = ccs.customer_orderid\nJOIN customer_contract cc on cc.customer_contractid = ccs.customer_contractid\nJOIN customer_contract_status ccstatus on ccstatus.customer_contract_statusid = ccs.contract_status\nJOIN product_catalogue pc on pc.product_catalogueid = ccs.product_catalogueid\nJOIN customer_network cn on cc.customer_networkid = cn.customer_networkid\nJOIN customer c on c.crmid = cc.crmid\nWHERE ccs.contract_status in (1)\nAND ccs.contract_period_end != '0000-00-00'\nAND cn.name != 'Productiontest'\nAND ccs.contract_period_end < CURDATE()\norder BY ccs.created_at\n;"
+      },
+      "name": "PendingTerminatedOrders",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        200,
+        620
+      ],
+      "credentials": {
+        "mySql": {
+          "id": null,
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT body, `timestamp` \nFROM\nrequest_log rl\nWHERE\nrequesturi = \"/api/1.0/event\" AND\nbody like \"%{{$json[\"SubscriptionId\"]}}%\"\n-- AND `timestamp` < '2021-11-15 00:00:00.000'\n;"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        920,
+        460
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": null,
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const newItems = [];\nfor (var item of items) {  \n  if(item.json[\"body\"] && item.json[\"body\"][\"type\"] === \"SUBSCRIPTION_TERMINATED_GUI\") {\n    newItems.push({json: {...item.json[\"body\"], timestamp: item.json[\"timestamp\"]}});\n    break;\n  }\n}\n\nreturn newItems;\n"
+      },
+      "name": "FilterElements",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        460
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!Object.keys($node[\"FilterElements\"].json).length}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFEmptyData",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1260,
+        460
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {},
+      "name": "NoOp",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge6",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1640,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow showid {{$json[\"searchWorkflowId\"]}}"
+      },
+      "name": "tctlSearch",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        480
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$node[\"tctlSearch\"].json[\"error\"]}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFNoSubscriptionWF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        480
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(300);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 3 secs1",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        0,
+        1080
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "http://10.201.5.24:8081/api/1.0/event",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "company_id",
+              "value": "={{$json[\"company_id\"]}}"
+            },
+            {
+              "name": "customer_id",
+              "value": "={{$json[\"customer_id\"]}}"
+            },
+            {
+              "name": "onetime_fee_id",
+              "value": "={{$json[\"onetime_fee_id\"]}}"
+            },
+            {
+              "name": "subject",
+              "value": "={{$json[\"subject\"]}}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{$json[\"subscription_id\"]}}"
+            },
+            {
+              "name": "type",
+              "value": "={{$json[\"type\"]}}"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "api-key",
+              "value": "asdfjkasdlkfj21345-cvmdsfkj-1232"
+            }
+          ]
+        }
+      },
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(300);\n\n// Output data\nreturn items;\n"
+      },
+      "name": "Sleep 3 secs2",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        1440,
+        860
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "functionCode": "return [];"
+      },
+      "name": "Dummy Function",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        1060
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "item.searchWorkflowId = item[\"subscription_id\"]>0?`subscription::${item[\"subscription_id\"]}`:`fee::${item[\"onetime_fee_id\"]}`;\n\nreturn item;"
+      },
+      "name": "FunctionItem2",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        1420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        380,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow terminate -w {{$json[\"searchWorkflowId\"]}}"
+      },
+      "name": "tctlSearch1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        160,
+        1240
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(3000);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 3 secs3",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        600,
+        1100
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "http://10.201.5.24:8081/api/1.0/event",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "company_id",
+              "value": "={{$json[\"company_id\"]}}"
+            },
+            {
+              "name": "customer_id",
+              "value": "={{$json[\"customer_id\"]}}"
+            },
+            {
+              "name": "onetime_fee_id",
+              "value": "={{$json[\"onetime_fee_id\"]}}"
+            },
+            {
+              "name": "subject",
+              "value": "={{$json[\"subject\"]}}"
+            },
+            {
+              "name": "subscription_id",
+              "value": "={{$json[\"subscription_id\"]}}"
+            },
+            {
+              "name": "type",
+              "value": "={{$json[\"type\"]}}"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "api-key",
+              "value": "asdfjkasdlkfj21345-cvmdsfkj-1232"
+            }
+          ]
+        }
+      },
+      "name": "HTTP Request1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        820,
+        1100
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1140,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(300);\n\n// Output data\nreturn items;\n"
+      },
+      "name": "Sleep 3 secs4",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        940,
+        880
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": false
+    }
+  ],
+  "connections": {
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "NoOp2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFEmptyData1": {
+      "main": [
+        [
+          {
+            "node": "NoOp3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PendingTerminatedOrders": {
+      "main": [
+        [
+          {
+            "node": "IFEmptyData1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "FilterElements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FilterElements": {
+      "main": [
+        [
+          {
+            "node": "IFEmptyData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFEmptyData": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FunctionItem2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "IFNoSubscriptionWF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tctlSearch": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "IFNoSubscriptionWF": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs1": {
+      "main": [
+        [
+          {
+            "node": "tctlSearch1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs2": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FunctionItem2": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "tctlSearch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tctlSearch1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs4": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2022-04-27T11:17:35.619Z",
+  "updatedAt": "2022-04-27T11:17:35.619Z",
+  "settings": {},
+  "staticData": null
+}
