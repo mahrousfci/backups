@@ -1,0 +1,991 @@
+{
+  "id": 26,
+  "name": "Get Subscriptions with metro error",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n\tIFNULL(cs.custom_product_name,product_catalogue_name) as name,\n\tca.accessid,\n\t cs.contract_status,\n\t status,\n\tcustomer_contract_subscriptionid as subscriptionid,\n\t c.customerid,\n\t cc.crmid,\n\t c2.company_name,\n\t c.active\nFROM customer_contract_subscription as cs\n\tLEFT JOIN customer_contract as cc ON cs.customer_contractid = cc.customer_contractid\n\tLEFT JOIN pricelist_unit as pu ON cs.pricelist_unitid = pu.pricelist_unitid\n\tLEFT JOIN customer_contract_status as ccs ON cs.contract_status = ccs.customer_contract_statusid\n\tLEFT JOIN customer as c ON cc.crmid = c.crmid\n\tLEFT JOIN product_catalogue as pc ON cs.product_catalogueid = pc.product_catalogueid\n\tLEFT JOIN customer_address AS ca ON cs.customer_addressid = ca.customer_addressid\n\tLEFT JOIN company c2 on c2.companyid = c.companyid \nWHERE \nc.customerid in (\n500769798,\n500117176,\n500101494,\n500769772,\n500118195,\n500769765,\n115408,\n115408,\n500769686,\n500769650,\n500118361,\n500770028,\n500769712,\n500115806,\n500769277,\n500769694,\n500117349,\n500769711,\n500769792,\n500769860,\n500104555,\n500104555,\n500769467,\n500107118,\n500101919,\n500769987,\n500769621,\n500769985,\n500769618,\n500103519,\n500769400,\n500769611,\n500769744,\n500769797,\n500769664,\n500118109,\n500769943,\n500108869,\n500769027,\n500115911,\n500769984,\n500769983,\n146634,\n500118309,\n500769785,\n500769754,\n500769982,\n500769710,\n500100085,\n500769512,\n500769521,\n500769834,\n500769750,\n500113656,\n500769981,\n500769751,\n500769980,\n500115515,\n500769966,\n500118240,\n500769187,\n500769333,\n500769979,\n500769753,\n500769768,\n500769897,\n500769897,\n500769235,\n500769978,\n500769940,\n500769857,\n500769904,\n500118449,\n500769685,\n500769799,\n500769708,\n500769976,\n500769707,\n500769004,\n500769856\n)\nand cs.contract_status in (1, 6)\nGROUP BY c.customerid\nHAVING COUNT(c.customerid) = 1\n;"
+      },
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 1,
+      "position": [
+        360,
+        480
+      ],
+      "credentials": {
+        "mySql": {
+          "id": null,
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        640,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"SplitInBatches\"].context[\"noItemsLeft\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1580,
+        700
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "NoOp2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1860,
+        680
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(500);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 3 secs",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        1420,
+        700
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge6",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow showid {{$json[\"searchWorkflowId\"]}}"
+      },
+      "name": "tctlSearch",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        960,
+        280
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "item.searchWorkflowId = `subscription::${item[\"subscriptionid\"]}`;\n\nreturn item;"
+      },
+      "name": "FunctionItem2",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        800,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$node[\"tctlSearch\"].json[\"error\"]}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFNoSubscriptionWF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        280
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "options": {}
+      },
+      "name": "Spreadsheet File",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "position": [
+        1740,
+        280
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fileName": "C:\\Users\\ies325\\Documents\\spreadsheet.xls"
+      },
+      "name": "Write excel error log",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "position": [
+        1920,
+        280
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "name": "Prepare tctl request",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        260,
+        140
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1620,
+        60
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "filePath": "C:\\Users\\ies325\\Documents\\spreadsheet.xls"
+      },
+      "name": "Read Binary File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "position": [
+        1360,
+        -120
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Spreadsheet File1",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "position": [
+        1500,
+        -120
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow showid {{$json[\"searchWorkflowId\"]}} --output_filename temp-{{$json[\"subscriptionid\"]}}.json"
+      },
+      "name": "tctlSearch1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        540,
+        960
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "name": "FunctionItem",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [
+        300,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "=C:\\Users\\ies325\\Documents\\n8n\\packages\\cli\\bin\\temp-{{$json[\"subscriptionid\"]}}.json"
+      },
+      "name": "Read Binary File1",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        900,
+        980
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Move Binary Data",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        1180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge7",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        800,
+        820
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\ies325\\Documents\\bin\\tctl.exe --address 10.201.4.24:7233 workflow showid {{$json[\"childWorflowId\"]}} --output_filename temp-{{$json[\"childWorflowId\"]}}.json"
+      },
+      "name": "tctlSearch2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        1120
+      ],
+      "alwaysOutputData": false,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "filePath": "=C:\\Users\\ies325\\Documents\\n8n\\packages\\cli\\bin\\temp-{{$json[\"childWorflowId\"]}}.json"
+      },
+      "name": "Read Binary File2",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        1140
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Move Binary Data1",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        2220,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge8",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const newItems = [];\nfor (var item of items) {\n  const {events, ...rest} = item.json;\n  if(events && events.length > 0) {\n    for (var event of events) {\n      if(event.eventType === \"StartChildWorkflowExecutionInitiated\" && event.startChildWorkflowExecutionInitiatedEventAttributes) {\n        newItems.push({json: { ...rest, childWorflowId: event.startChildWorkflowExecutionInitiatedEventAttributes.workflowId}});\n      }\n    }\n  }\n}\nreturn newItems;\n"
+      },
+      "name": "GetChildWorkflow",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        980
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const newItems = [];\nfor (var item of items) {\n  const {events, ...rest} = item.json;\n  if (events && events.length > 0) {\n    for (var event of events) {\n      if (\n        event.eventType === \"ActivityTaskScheduled\" &&\n        event[\"activityTaskScheduledEventAttributes\"] &&\n        event[\"activityTaskScheduledEventAttributes\"][\"input\"] &&\n        event[\"activityTaskScheduledEventAttributes\"][\"activityType\"] &&\n        event[\"activityTaskScheduledEventAttributes\"][\"activityType\"][\"name\"] === \"Log\"\n      ) {\n        const payloads = event[\"activityTaskScheduledEventAttributes\"][\"input\"][\"payloads\"] || [];\n        if(payloads.length > 1)\n        {\n          const encodedData = payloads[1]?.data;\n          let buff = new Buffer(encodedData, 'base64');\n          let decodedStr = buff.toString('UTF-8');          \n          const apiPayload = JSON.parse(decodedStr);\n          if(\n            apiPayload.topic === \"no existing metro orders found\" &&\n            apiPayload.message.startsWith(\"could not find any metro orders on the access address:\")          \n          ) {\n            console.log(apiPayload);\n            newItems.push({ json: { ...rest } });\n          }          \n        }\n        //newItems.push({ json: { activityTaskScheduledEventAttributes: event.activityTaskScheduledEventAttributes } });\n      }\n    }\n  }\n}\nreturn newItems;\n"
+      },
+      "name": "GetMetroErrorItems",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2500,
+        1080
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!Object.keys($node[\"GetMetroErrorItems\"].json).length}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "IFEmptyMetroError",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2680,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "passThrough"
+      },
+      "name": "Merge9",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        1480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toFile",
+        "options": {}
+      },
+      "name": "Spreadsheet File2",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "position": [
+        3320,
+        1040
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fileName": "C:\\Users\\ies325\\Documents\\metro-errorsheet.xls"
+      },
+      "name": "Write excel error log1",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "position": [
+        3500,
+        1040
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "name": "Merge1",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        3220,
+        1480
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "filePath": "C:\\Users\\ies325\\Documents\\metro-errorsheet.xls"
+      },
+      "name": "Read Binary File3",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "position": [
+        2940,
+        1300
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Spreadsheet File3",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "position": [
+        3100,
+        1300
+      ],
+      "typeVersion": 1,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "functionCode": "return [];"
+      },
+      "name": "Dummy Function",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        2380,
+        1480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "multiplex"
+      },
+      "name": "Merge2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        980
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "multiplex"
+      },
+      "name": "Merge3",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(200);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 3 secs1",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        2860,
+        820
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(1000);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 1 secs",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        700,
+        1100
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "functionCode": "function sleep(milliseconds) {\n  return new Promise(\n    resolve => setTimeout(resolve, milliseconds)\n  );\n}\n\nawait sleep(1000);\n\n// Output data\nreturn items;"
+      },
+      "name": "Sleep 1 secs1",
+      "type": "n8n-nodes-base.function",
+      "position": [
+        1660,
+        1220
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$node[\"tctlSearch2\"].json[\"error\"]}}",
+              "value2": true
+            }
+          ],
+          "number": []
+        }
+      },
+      "name": "IFNoSubscriptionWF1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1880,
+        1160
+      ],
+      "alwaysOutputData": false
+    }
+  ],
+  "connections": {
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SplitInBatches": {
+      "main": [
+        [
+          {
+            "node": "FunctionItem2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "NoOp2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SplitInBatches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "IFNoSubscriptionWF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tctlSearch": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "FunctionItem2": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "tctlSearch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFNoSubscriptionWF": {
+      "main": [
+        [
+          {
+            "node": "Read Binary File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "tctlSearch1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File": {
+      "main": [
+        [
+          {
+            "node": "Write excel error log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write excel error log": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tctlSearch1": {
+      "main": [
+        [
+          {
+            "node": "Sleep 1 secs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File1": {
+      "main": [
+        [
+          {
+            "node": "Move Binary Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Binary Data": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge7": {
+      "main": [
+        [
+          {
+            "node": "Read Binary File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tctlSearch2": {
+      "main": [
+        [
+          {
+            "node": "Sleep 1 secs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File2": {
+      "main": [
+        [
+          {
+            "node": "Move Binary Data1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Binary Data1": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge8": {
+      "main": [
+        [
+          {
+            "node": "IFNoSubscriptionWF1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetChildWorkflow": {
+      "main": [
+        [
+          {
+            "node": "tctlSearch2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetMetroErrorItems": {
+      "main": [
+        [
+          {
+            "node": "IFEmptyMetroError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IFEmptyMetroError": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Binary File3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File2": {
+      "main": [
+        [
+          {
+            "node": "Write excel error log1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write excel error log1": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Binary File3": {
+      "main": [
+        [
+          {
+            "node": "Spreadsheet File3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Spreadsheet File3": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "GetChildWorkflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "GetMetroErrorItems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 3 secs1": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sleep 1 secs": {
+      "main": [
+        [
+          {
+            "node": "Merge7",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sleep 1 secs1": {
+      "main": [
+        [
+          {
+            "node": "Merge8",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "IFNoSubscriptionWF1": {
+      "main": [
+        [
+          {
+            "node": "Sleep 3 secs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read Binary File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2022-04-27T11:18:50.147Z",
+  "updatedAt": "2022-04-27T11:18:50.147Z",
+  "settings": {},
+  "staticData": null
+}
